@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Setting {
+  id    String @id @default("1")
+  key   String @unique
+  value String
+}
+
+model Period {
+  id        String   @id @default(cuid())
+  name      String   // e.g. "2024/2025 Ganjil"
+  isDefault Boolean  @default(false)
+  isActive  Boolean  @default(true) // control public access/visibility
+  classes   Class[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Class {
+  id        String    @id @default(cuid())
+  name      String
+  periodId  String
+  period    Period    @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  subjects  Subject[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Subject {
+  id               String        @id @default(cuid())
+  name             String
+  googleDocsUrl    String?
+  workMode         String        @default("ONLINE") // "ONLINE" or "FILE"
+  ustadzApproved   Boolean       @default(false)
+  ustadzahApproved Boolean       @default(false)
+  status           String        @default("DRAFT")
+  classId          String
+  class            Class         @relation(fields: [classId], references: [id], onDelete: Cascade)
+  comments         Comment[]
+  attachments      Attachment[]
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+model Attachment {
+  id         String   @id @default(cuid())
+  filename   String
+  fileUrl    String
+  uploadedBy String   // "Ustadz" or "Ustadzah"
+  subjectId  String
+  subject    Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  content   String
+  sender    String   // "Ustadz" or "Ustadzah"
+  subjectId String
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+
