@@ -5,12 +5,11 @@ import { existsSync } from 'fs'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ subjectId: string; filename: string }> }
+  context: { params: Promise<{ subjectId: string; filename: string }> }
 ) {
-  const { subjectId, filename } = await params
+  const { subjectId, filename } = await context.params
 
   // Construct absolute path to the file
-  // We look in public/uploads because that's where the current actions.ts saves it
   const filePath = path.join(process.cwd(), 'public', 'uploads', subjectId, filename)
 
   if (!existsSync(filePath)) {
@@ -22,9 +21,9 @@ export async function GET(
     
     // Determine content type (basic)
     let contentType = 'application/octet-stream'
-    if (filename.endsWith('.pdf')) contentType = 'application/pdf'
-    if (filename.endsWith('.docx')) contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    if (filename.endsWith('.doc')) contentType = 'application/msword'
+    if (filename.toLowerCase().endsWith('.pdf')) contentType = 'application/pdf'
+    if (filename.toLowerCase().endsWith('.docx')) contentType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    if (filename.toLowerCase().endsWith('.doc')) contentType = 'application/msword'
 
     return new NextResponse(fileBuffer, {
       headers: {
