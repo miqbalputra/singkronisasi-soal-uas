@@ -30,6 +30,8 @@ export default function DocsViewer({ url, title }: { url: string | null, title: 
     position: 'relative' as const,
     display: 'flex',
     flexDirection: 'column' as const,
+    minHeight: '750px',
+    height: '75vh',
   }
 
   const frameStyle = {
