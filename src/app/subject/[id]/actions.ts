@@ -72,7 +72,7 @@ export async function uploadFile(subjectId: string, sender: string, formData: Fo
   const filePath = path.join(uploadDir, filename)
   await writeFile(filePath, buffer)
 
-  const fileUrl = `/uploads/${subjectId}/${filename}`
+  const fileUrl = `/api/uploads/${subjectId}/${filename}`
 
   await prisma.attachment.create({
     data: {
@@ -95,7 +95,10 @@ export async function deleteFile(subjectId: string, attachmentId: string) {
   if (!attachment) return { error: 'File tidak ditemukan' }
 
   try {
-    const filePath = path.join(process.cwd(), 'public', attachment.fileUrl)
+    // Extract filename from URL (e.g. /api/uploads/id/filename)
+    const urlParts = attachment.fileUrl.split('/')
+    const filename = urlParts[urlParts.length - 1]
+    const filePath = path.join(process.cwd(), 'public', 'uploads', subjectId, filename)
     await unlink(filePath)
   } catch (e) {
     console.error('Error deleting file:', e)

@@ -19,9 +19,9 @@ async function main() {
     console.log('Created default period:', period.name)
   }
 
-  // 2. Link all classes without period to this period
+  // 2. Link all classes to this period (initial migration)
   const result = await prisma.class.updateMany({
-    where: { periodId: null as any },
+    where: {},
     data: { periodId: period.id }
   })
 
