@@ -1,9 +1,21 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Sinkronisasi Soal UAS',
   description: 'Sistem Sinkronisasi & Persetujuan Soal UAS',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Exam Sync',
+  },
+}
+
+export const viewport: Viewport = {
+  themeColor: '#4ade80',
+  width: 'device-width',
+  initialScale: 1,
 }
 
 export default function RootLayout({
