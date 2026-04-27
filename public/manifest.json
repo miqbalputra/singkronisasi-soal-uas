@@ -1,6 +1,6 @@
 {
-  "name": "Singkronisasi Soal UAS",
-  "short_name": "Exam Sync",
+  "name": "Sync Soal UAS GQ",
+  "short_name": "Sync Soal GQ",
   "description": "Aplikasi Sinkronisasi Soal UAS Griya Qur'an",
   "start_url": "/",
   "display": "standalone",

@@ -2,13 +2,13 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Sinkronisasi Soal UAS',
+  title: 'Sync Soal UAS GQ',
   description: 'Sistem Sinkronisasi & Persetujuan Soal UAS',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Exam Sync',
+    title: 'Sync Soal GQ',
   },
 }
 
