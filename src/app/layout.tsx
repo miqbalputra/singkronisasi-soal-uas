@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import PWARegistration from '@/components/PWARegistration'
 
 export const metadata: Metadata = {
   title: 'Sync Soal UAS GQ',
@@ -26,6 +27,7 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning>
       <body>
+        <PWARegistration />
         <main className="container" style={{ minHeight: '100vh', paddingBottom: '2rem' }}>
           {children}
         </main>
