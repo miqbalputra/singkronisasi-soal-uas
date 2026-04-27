@@ -7,10 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "migrate:periods": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/migratePeriods.ts"
+    "migrate:periods": "npx ts-node --compiler-options '{\"module\":\"CommonJS\"}' scripts/migratePeriods.ts"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"
+    "seed": "npx ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -19,7 +19,9 @@
     "next": "16.2.4",
     "next-auth": "^4.24.14",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -28,7 +30,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
-    "prisma": "^5.22.0",
-    "typescript": "^5"
+    "prisma": "^5.22.0"
   }
 }
