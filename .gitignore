@@ -43,3 +43,6 @@ next-env.d.ts
 /src/generated/prisma
 dev.db
 *.bak
+
+# Private chat uploads (persist and back up this directory on the server)
+/storage/chat/

@@ -4,29 +4,76 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { writeFile, mkdir, unlink } from 'fs/promises'
 import path from 'path'
+import { randomUUID } from 'crypto'
 import { cookies } from 'next/headers'
-import { MAX_MESSAGE_LENGTH, type ChatResult } from '@/lib/chat'
+import { MAX_MESSAGE_LENGTH, validateChatFile, type ChatResult } from '@/lib/chat'
 
 export async function addComment(subjectId: string, sender: unknown, content: unknown): Promise<ChatResult> {
+  return saveChatMessage(subjectId, sender, content)
+}
+
+export async function sendChatMessage(subjectId: string, formData: FormData): Promise<ChatResult> {
+  return saveChatMessage(subjectId, formData.get('sender'), formData.get('content'), formData.get('file'))
+}
+
+async function saveChatMessage(subjectId: string, sender: unknown, content: unknown, upload?: unknown): Promise<ChatResult> {
   if ((await cookies()).get('auth_pin')?.value !== 'verified') {
     return { error: 'Sesi berakhir. Buka aplikasi di tab baru dan masuk kembali sebelum mengirim.' }
   }
   if (typeof content !== 'string') return { error: 'Pesan tidak valid' }
-  if (!content.trim()) return { error: 'Komentar tidak boleh kosong' }
+  const file = upload instanceof File && upload.name ? upload : null
+  if (upload != null && !file) return { error: 'Lampiran tidak valid' }
+  if (!content.trim() && !file) return { error: 'Tulis pesan atau pilih file terlebih dahulu.' }
   if (content.length > MAX_MESSAGE_LENGTH) return { error: 'Pesan maksimal 4.000 karakter' }
   if (sender !== 'Ustadz' && sender !== 'Ustadzah') return { error: 'Pengirim tidak valid' }
+  if (file) {
+    const error = validateChatFile(file)
+    if (error) return { error }
+  }
+  let savedFilePath: string | null = null
 
   try {
+    let attachment: { attachmentName: string; attachmentUrl: string; attachmentSize: number } | undefined
+    if (file) {
+      // Confirm the subject exists before creating any files on disk.
+      if (!await prisma.subject.findUnique({ where: { id: subjectId }, select: { id: true } })) {
+        return { error: 'Mata pelajaran tidak ditemukan.' }
+      }
+      const filename = `${randomUUID()}${path.extname(file.name).toLowerCase()}`
+      const directory = path.join(process.cwd(), 'storage', 'chat')
+      await mkdir(directory, { recursive: true })
+      const destination = path.join(directory, filename)
+      savedFilePath = destination
+      try {
+        await writeFile(destination, Buffer.from(await file.arrayBuffer()), { flag: 'wx' })
+      } catch (error) {
+        // A partial disk write may leave bytes behind; never remove an existing
+        // file if exclusive creation failed because of an unlikely name collision.
+        if ((error as NodeJS.ErrnoException).code === 'EEXIST') savedFilePath = null
+        throw error
+      }
+      attachment = {
+        attachmentName: file.name,
+        attachmentUrl: `/api/chat-files/${encodeURIComponent(subjectId)}/${filename}`,
+        attachmentSize: file.size,
+      }
+    }
     await prisma.comment.create({
       data: {
         subjectId,
         sender,
         content: content.trim(),
+        ...attachment,
       },
     })
   } catch (error) {
+    if (savedFilePath) {
+      try { await unlink(savedFilePath) } catch (cleanupError) {
+        if ((cleanupError as NodeJS.ErrnoException).code !== 'ENOENT') console.error('Failed to clean up chat upload:', cleanupError)
+      }
+    }
     console.error('Failed to save discussion message:', error)
-    return { error: 'Pesan belum tersimpan. Silakan coba lagi. Jika tetap gagal, hubungi admin.' }
+    return { error: 'Pesan atau lampiran belum tersimpan. Silakan coba lagi. Jika tetap gagal, hubungi admin.' }
   }
 
   revalidatePath(`/subject/${subjectId}`)

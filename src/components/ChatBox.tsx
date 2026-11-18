@@ -2,9 +2,11 @@
 
 import { Fragment, useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowDown, Clock3, Maximize2, MessageSquare, Minimize2, X } from 'lucide-react'
+import { ArrowDown, Clock3, Download, FileText, Maximize2, MessageSquare, Minimize2, X } from 'lucide-react'
 import CommentForm from './CommentForm'
 import type { SubmitComment } from '@/lib/chat'
+import { formatChatFileSize } from '@/lib/chat'
+import { messageBlocks } from '@/lib/chat-numbering'
 import { getPendingReply } from '@/lib/chat-pending'
 import styles from './ChatBox.module.css'
 
@@ -13,6 +15,9 @@ interface Comment {
   sender: string
   content: string
   createdAt: Date
+  attachmentName?: string | null
+  attachmentUrl?: string | null
+  attachmentSize?: number | null
 }
 
 export default function ChatBox({ comments, subjectId, submitAction }: {
@@ -154,7 +159,20 @@ export default function ChatBox({ comments, subjectId, submitAction }: {
             </div>}
             <article className={`${styles.message} ${comment.sender === 'Ustadzah' ? styles.ustadzah : styles.ustadz}`}>
               <span className={styles.sender}>{comment.sender}</span>
-              <p>{comment.content}</p>
+              {comment.content && <div className={styles.messageText}>
+                {messageBlocks(comment.content).map((block, index) => block.type === 'text'
+                  ? <p key={index}>{block.text}</p>
+                  : <ol key={index} start={block.items[0].number}>
+                    {block.items.map((item, itemIndex) => <li key={itemIndex} value={item.number}>{item.text}</li>)}
+                  </ol>)}
+              </div>}
+              {comment.attachmentName && comment.attachmentUrl && <a className={styles.fileDownload}
+                href={comment.attachmentUrl} download={comment.attachmentName}>
+                <FileText size={24} aria-hidden="true" />
+                <span><strong>{comment.attachmentName}</strong>
+                  <small>{comment.attachmentSize != null && `${formatChatFileSize(comment.attachmentSize)} · `}Unduh file</small>
+                </span><Download size={19} aria-hidden="true" />
+              </a>}
               <time dateTime={new Date(comment.createdAt).toISOString()}>
                 {new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(comment.createdAt))} WIB
               </time>

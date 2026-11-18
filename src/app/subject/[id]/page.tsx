@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { addComment, toggleApproval } from './actions'
+import { sendChatMessage, toggleApproval } from './actions'
 import DocsViewer from '@/components/DocsViewer'
 import FileManager from '@/components/FileManager'
 import StatusBadge from '@/components/StatusBadge'
@@ -73,7 +73,7 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
         subjectId={subject.id} 
         submitAction={async (formData) => {
           'use server'
-          return addComment(subject.id, formData.get('sender'), formData.get('content'))
+          return sendChatMessage(subject.id, formData)
         }} 
       />
     </div>

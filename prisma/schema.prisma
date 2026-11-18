@@ -70,6 +70,9 @@ model Attachment {
 model Comment {
   id        String   @id @default(cuid())
   content   String   @db.Text
+  attachmentName String? @db.VarChar(255)
+  attachmentUrl  String? @db.VarChar(512)
+  attachmentSize Int?
   sender    String   // "Ustadz" or "Ustadzah"
   subjectId String
   subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)

@@ -18,7 +18,35 @@ berubah menjadi Balas saat peran yang dipilih sedang ditunggu. Balasan dianggap
 berhasil setelah server menyimpan pesan; gagal kirim tidak mengubah hitungan.
 Aplikasi tetap memakai PIN bersama tanpa akun guru individual.
 
+## Daftar bernomor dan lampiran
+
+Tombol Daftar menambahkan atau menghapus penomoran pada baris yang dipilih. Ketik
+`1. Catatan` lalu Enter untuk melanjutkan `2. `. Enter pada nomor kosong mengakhiri
+daftar; Shift+Enter menyisipkan baris biasa. Pesan tampil sebagai daftar bernomor
+tanpa menafsirkan HTML. Ctrl/Cmd+Enter tetap mengirim pesan.
+
+Lampirkan menerima satu file maksimal 10 MiB per pesan: PDF, Word, Excel,
+PowerPoint, JPG/PNG/WebP, TXT, ZIP. Pesan boleh berupa file saja atau file dengan
+teks. Nama dan ukuran ditampilkan sebelum kirim; lampiran dapat dibuang sebelum
+dikirim. Kegagalan pengiriman mempertahankan teks dan file agar bisa dicoba lagi.
+Pesan dengan file tetap mengikuti aturan menunggu balasan berdasarkan peran.
+
+File chat terpisah dari file soal utama. File berada di `storage/chat` dan hanya
+dapat diunduh melalui route aplikasi dengan sesi PIN aktif. Direktori ini harus
+berada pada disk/volume persisten yang dapat ditulis, ikut dibackup, dan tidak
+dihapus saat deployment. Untuk beberapa instance server, gunakan volume bersama.
+Konfigurasi Server Actions mengizinkan payload 12 MiB untuk file 10 MiB beserta
+overhead form; batas reverse proxy hosting juga harus mengizinkan ukuran tersebut.
+
 ## Database sebelum deployment
+
+Untuk pembaruan lampiran, jalankan **sekali** `scripts/add-chat-attachments.sql`
+sebelum deployment, lalu `npx prisma generate` saat build. SQL ini memperlebar
+content sekaligus menambahkan tiga kolom nullable pada Comment. Riwayat pesan lama
+tetap ada dan lampirannya kosong. Skema baru memerlukan ketiga kolom tersebut;
+deploy kode setelah SQL berhasil. SQL ini juga sudah mencakup perubahan TEXT dari
+versi sebelumnya, sehingga tidak perlu menjalankan kedua skrip pada instalasi baru
+yang masih memakai skema lama.
 
 Skema lama memakai String MySQL bawaan (VARCHAR(191)) untuk Comment.content.
 Jalankan `scripts/expand-comment-content.sql` pada database MySQL aplikasi sebelum
@@ -34,6 +62,10 @@ draf dan menampilkan kegagalan pengiriman.
 `npm run test:chat` menguji validasi pesan, kedua peran, sesi PIN, pesan 4.000
 karakter, kegagalan database, serta hitungan rangkaian pesan menunggu balasan.
 Batas request/database disimulasikan pada tes server.
+Tes juga mencakup kelanjutan/akhir penomoran, file tanpa teks, validasi lampiran,
+pembersihan file ketika penyimpanan gagal, dan otorisasi serta nama Unicode pada
+unduhan. UI daftar/lampiran diuji pada keenam ukuran layar di bawah dengan respons
+pengiriman disimulasikan, termasuk input baris baru dari keyboard mobile.
 `npm run build` memeriksa build produksi beserta TypeScript.
 
 Pengujian browser komponen dilakukan pada 1440×900, 768×1024, 390×844, 320×568,
