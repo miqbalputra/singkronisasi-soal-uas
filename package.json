@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:chat": "node --test tests/chat-actions.test.cjs tests/chat-pending.test.cjs",
     "migrate:periods": "ts-node --compiler-options \"{\\\"module\\\":\\\"CommonJS\\\"}\" scripts/migratePeriods.ts"
   },
   "prisma": {

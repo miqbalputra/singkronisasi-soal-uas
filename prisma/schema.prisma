@@ -69,7 +69,7 @@ model Attachment {
 
 model Comment {
   id        String   @id @default(cuid())
-  content   String
+  content   String   @db.Text
   sender    String   // "Ustadz" or "Ustadzah"
   subjectId String
   subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)

@@ -2,7 +2,6 @@ import { prisma } from '@/lib/prisma'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { addComment, toggleApproval } from './actions'
-import CommentForm from '@/components/CommentForm'
 import DocsViewer from '@/components/DocsViewer'
 import FileManager from '@/components/FileManager'
 import StatusBadge from '@/components/StatusBadge'
@@ -69,14 +68,12 @@ export default async function SubjectPage({ params }: { params: Promise<{ id: st
 
       {/* Floating ChatBox */}
       <ChatBox 
+        key={subject.id}
         comments={subject.comments} 
         subjectId={subject.id} 
         submitAction={async (formData) => {
           'use server'
-          const sender = formData.get('sender') as string
-          const content = formData.get('content') as string
-          if (!content) return
-          await addComment(subject.id, sender, content)
+          return addComment(subject.id, formData.get('sender'), formData.get('content'))
         }} 
       />
     </div>

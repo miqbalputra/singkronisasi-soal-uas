@@ -4,20 +4,33 @@ import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { writeFile, mkdir, unlink } from 'fs/promises'
 import path from 'path'
+import { cookies } from 'next/headers'
+import { MAX_MESSAGE_LENGTH, type ChatResult } from '@/lib/chat'
 
-export async function addComment(subjectId: string, sender: string, content: string) {
+export async function addComment(subjectId: string, sender: unknown, content: unknown): Promise<ChatResult> {
+  if ((await cookies()).get('auth_pin')?.value !== 'verified') {
+    return { error: 'Sesi berakhir. Buka aplikasi di tab baru dan masuk kembali sebelum mengirim.' }
+  }
+  if (typeof content !== 'string') return { error: 'Pesan tidak valid' }
   if (!content.trim()) return { error: 'Komentar tidak boleh kosong' }
+  if (content.length > MAX_MESSAGE_LENGTH) return { error: 'Pesan maksimal 4.000 karakter' }
   if (sender !== 'Ustadz' && sender !== 'Ustadzah') return { error: 'Pengirim tidak valid' }
 
-  await prisma.comment.create({
-    data: {
-      subjectId,
-      sender,
-      content,
-    },
-  })
+  try {
+    await prisma.comment.create({
+      data: {
+        subjectId,
+        sender,
+        content: content.trim(),
+      },
+    })
+  } catch (error) {
+    console.error('Failed to save discussion message:', error)
+    return { error: 'Pesan belum tersimpan. Silakan coba lagi. Jika tetap gagal, hubungi admin.' }
+  }
 
   revalidatePath(`/subject/${subjectId}`)
+  return { success: true }
 }
 
 export async function toggleApproval(subjectId: string, sender: string) {

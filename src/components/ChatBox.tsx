@@ -1,8 +1,12 @@
 'use client'
 
-import React, { useState } from 'react'
-import { MessageSquare, Minus, Maximize2, X, Send } from 'lucide-react'
+import { Fragment, useCallback, useEffect, useId, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { ArrowDown, Clock3, Maximize2, MessageSquare, Minimize2, X } from 'lucide-react'
 import CommentForm from './CommentForm'
+import type { SubmitComment } from '@/lib/chat'
+import { getPendingReply } from '@/lib/chat-pending'
+import styles from './ChatBox.module.css'
 
 interface Comment {
   id: string
@@ -11,166 +15,157 @@ interface Comment {
   createdAt: Date
 }
 
-interface ChatBoxProps {
+export default function ChatBox({ comments, subjectId, submitAction }: {
   comments: Comment[]
   subjectId: string
-  submitAction: (formData: FormData) => Promise<void>
-}
-
-export default function ChatBox({ comments, subjectId, submitAction }: ChatBoxProps) {
+  submitAction: SubmitComment
+}) {
   const [isOpen, setIsOpen] = useState(false)
   const [isMaximized, setIsMaximized] = useState(false)
+  const [showLatest, setShowLatest] = useState(false)
+  const launcher = useRef<HTMLButtonElement>(null)
+  const panel = useRef<HTMLElement>(null)
+  const messages = useRef<HTMLDivElement>(null)
+  const nearBottom = useRef(true)
+  const router = useRouter()
+  const id = useId()
+  const lastMessage = comments.at(-1)?.id
+  const pendingReply = getPendingReply(comments)
 
-  if (!isOpen) {
-    return (
-      <button 
-        onClick={() => setIsOpen(true)}
-        style={{
-          position: 'fixed',
-          bottom: '2rem',
-          right: '2rem',
-          width: '60px',
-          height: '60px',
-          borderRadius: '50%',
-          background: 'var(--primary)',
-          color: 'white',
-          border: '4px solid black',
-          boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          zIndex: 1000,
-          transition: 'transform 0.2s ease'
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1) rotate(-5deg)'}
-        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1) rotate(0deg)'}
-      >
-        <MessageSquare size={30} />
-        {comments.length > 0 && (
-          <span style={{
-            position: 'absolute',
-            top: '-5px',
-            right: '-5px',
-            background: 'var(--danger)',
-            color: 'white',
-            fontSize: '0.75rem',
-            fontWeight: 900,
-            padding: '0.2rem 0.5rem',
-            borderRadius: '10px',
-            border: '2px solid black'
-          }}>
-            {comments.length}
-          </span>
-        )}
-      </button>
-    )
+  function scrollToLatest() {
+    const list = messages.current
+    if (list) list.scrollTop = list.scrollHeight
+    nearBottom.current = true
+    setShowLatest(false)
   }
 
-  const width = isMaximized ? '80vw' : '400px'
-  const height = isMaximized ? '80vh' : '500px'
+  const close = useCallback(() => {
+    setIsOpen(false)
+    requestAnimationFrame(() => launcher.current?.focus({ preventScroll: true }))
+  }, [])
+
+  useEffect(() => {
+    if (!isOpen || document.visibilityState !== 'visible') return
+    if (nearBottom.current) {
+      const list = messages.current
+      if (list) list.scrollTop = list.scrollHeight
+    } else {
+      setShowLatest(true)
+    }
+  }, [isOpen, lastMessage])
+
+  useEffect(() => {
+    const revealLatest = () => {
+      if (nearBottom.current && document.visibilityState === 'visible') {
+        const list = messages.current
+        if (list) list.scrollTop = list.scrollHeight
+      }
+    }
+    document.addEventListener('visibilitychange', revealLatest)
+    return () => document.removeEventListener('visibilitychange', revealLatest)
+  }, [])
+
+  useEffect(() => {
+    if (!isOpen) return
+    panel.current?.focus({ preventScroll: true })
+    const viewport = window.visualViewport
+    const resize = () => {
+      panel.current?.style.setProperty('--chat-viewport-height', `${viewport?.height ?? window.innerHeight}px`)
+      panel.current?.style.setProperty('--chat-viewport-top', `${viewport?.offsetTop ?? 0}px`)
+    }
+    resize()
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') close() }
+    document.addEventListener('keydown', escape)
+    viewport?.addEventListener('resize', resize)
+    viewport?.addEventListener('scroll', resize)
+    return () => {
+      document.removeEventListener('keydown', escape)
+      viewport?.removeEventListener('resize', resize)
+      viewport?.removeEventListener('scroll', resize)
+    }
+  }, [isOpen, close])
+
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === 'visible') router.refresh() }
+    refresh()
+    const interval = window.setInterval(refresh, 15000)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [router, subjectId])
 
   return (
-    <div style={{
-      position: 'fixed',
-      bottom: isMaximized ? '10vh' : '2rem',
-      right: isMaximized ? '10vw' : '2rem',
-      width: width,
-      height: height,
-      maxWidth: '95vw',
-      maxHeight: '95vh',
-      background: 'white',
-      border: '4px solid black',
-      boxShadow: '8px 8px 0px 0px rgba(0,0,0,1)',
-      borderRadius: '12px',
-      display: 'flex',
-      flexDirection: 'column',
-      zIndex: 1000,
-      transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-      overflow: 'hidden'
-    }}>
-      {/* Header */}
-      <div style={{ 
-        padding: '0.75rem 1rem', 
-        background: 'var(--primary)', 
-        color: 'white', 
-        borderBottom: '4px solid black',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <MessageSquare size={20} />
-          <h3 style={{ fontWeight: 900, fontSize: '1rem', textTransform: 'uppercase', letterSpacing: '1px' }}>Ruang Diskusi</h3>
-        </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button 
-            onClick={() => setIsMaximized(!isMaximized)} 
-            style={{ background: 'white', border: '2px solid black', borderRadius: '4px', padding: '2px', cursor: 'pointer' }}
-            title={isMaximized ? 'Minimize' : 'Maximize'}
-          >
-            {isMaximized ? <Minus size={16} color="black" /> : <Maximize2 size={16} color="black" />}
-          </button>
-          <button 
-            onClick={() => setIsOpen(false)} 
-            style={{ background: 'var(--danger)', border: '2px solid black', borderRadius: '4px', padding: '2px', cursor: 'pointer' }}
-            title="Close"
-          >
-            <X size={16} color="white" />
-          </button>
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div style={{ 
-        flex: 1, 
-        overflowY: 'auto', 
-        padding: '1.5rem', 
-        display: 'flex', 
-        flexDirection: 'column', 
-        gap: '1rem',
-        background: '#f8fafc'
-      }}>
-        {comments.length === 0 ? (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.5 }}>
-            <MessageSquare size={48} style={{ marginBottom: '1rem' }} />
-            <p style={{ fontWeight: 700 }}>Belum ada diskusi.</p>
-            <p style={{ fontSize: '0.85rem' }}>Mulai percakapan sekarang!</p>
+    <>
+      <button ref={launcher} type="button" className={styles.launcher} hidden={isOpen}
+        aria-label={pendingReply
+          ? `Buka ruang diskusi, ${pendingReply.count} pesan menunggu balasan ${pendingReply.waitingFor}`
+          : 'Buka ruang diskusi'}
+        aria-expanded={isOpen} aria-controls={id}
+        onClick={() => { nearBottom.current = true; setIsOpen(true) }}>
+        <MessageSquare size={24} aria-hidden="true" />
+        <span className={styles.launcherText}>Diskusi
+          {pendingReply && <span>Menunggu {pendingReply.waitingFor}</span>}
+        </span>
+        {pendingReply && <span className={styles.count}>{pendingReply.count > 99 ? '99+' : pendingReply.count}</span>}
+      </button>
+      {/* Keep the form mounted so closing the panel does not discard the draft. */}
+      <section ref={panel} id={id} hidden={!isOpen} tabIndex={-1} role="dialog"
+        aria-labelledby={`${id}-title`} className={`${styles.panel} ${isMaximized ? styles.maximized : ''}`}>
+        <header className={styles.header}>
+          <div className={styles.headerIcon}><MessageSquare size={24} aria-hidden="true" /></div>
+          <div className={styles.heading}>
+            <h2 id={`${id}-title`}>Ruang Diskusi</h2>
+            <p>Koordinasi Ustadz &amp; Ustadzah</p>
           </div>
-        ) : (
-          comments.map(c => (
-            <div key={c.id} style={{ 
-              padding: '0.75rem 1rem', 
-              borderRadius: '12px', 
-              background: c.sender === 'Ustadz' ? 'var(--ustadz)' : 'var(--ustadzah)', 
-              width: 'fit-content', 
-              maxWidth: '85%',
-              alignSelf: c.sender === 'Ustadz' ? 'flex-start' : 'flex-end', 
-              border: '3px solid black', 
-              boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)',
-              position: 'relative'
-            }}>
-              <span style={{ 
-                fontSize: '0.65rem', 
-                fontWeight: 900, 
-                color: 'white', 
-                display: 'block', 
-                marginBottom: '0.25rem', 
-                textTransform: 'uppercase',
-                opacity: 0.9
-              }}>
-                {c.sender}
-              </span>
-              <p style={{ fontSize: '0.95rem', color: 'white', fontWeight: 600, lineHeight: 1.4 }}>{c.content}</p>
+          <button type="button" className={`${styles.iconButton} ${styles.resizeButton}`}
+            aria-label={isMaximized ? 'Kembalikan ukuran diskusi' : 'Perbesar diskusi'}
+            onClick={() => setIsMaximized(!isMaximized)}>
+            {isMaximized ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+          </button>
+          <button type="button" className={styles.iconButton} aria-label="Tutup diskusi" onClick={close}><X size={22} /></button>
+        </header>
+        {pendingReply && <div className={styles.replyBanner} role="status">
+          <Clock3 size={20} aria-hidden="true" />
+          <div><strong>{pendingReply.count} pesan menunggu balasan {pendingReply.waitingFor}</strong>
+            <p>Angka tetap muncul sampai {pendingReply.waitingFor} membalas.</p>
+          </div>
+        </div>}
+        <div ref={messages} className={styles.messages} role="log" aria-label="Pesan diskusi"
+          aria-live={isOpen ? 'polite' : 'off'} aria-relevant="additions" tabIndex={0}
+          onScroll={event => {
+            const list = event.currentTarget
+            nearBottom.current = list.scrollHeight - list.scrollTop - list.clientHeight < 80
+            if (nearBottom.current) setShowLatest(false)
+          }}>
+          {comments.length === 0 ? (
+            <div className={styles.empty}>
+              <MessageSquare size={40} aria-hidden="true" />
+              <h3>Mulai diskusi soal</h3>
+              <p>Sampaikan pertanyaan atau catatan revisi. Pilih Ustadz atau Ustadzah sebelum mengirim.</p>
             </div>
-          ))
-        )}
-      </div>
-
-      {/* Form Area */}
-      <div style={{ padding: '1rem', background: 'white', borderTop: '4px solid black' }}>
-        <CommentForm submitAction={submitAction} />
-      </div>
-    </div>
+          ) : comments.map(comment => (
+            <Fragment key={comment.id}>
+            {comment.id === pendingReply?.firstMessageId && <div className={styles.pendingDivider}>
+              <span>Menunggu balasan {pendingReply.waitingFor}</span>
+            </div>}
+            <article className={`${styles.message} ${comment.sender === 'Ustadzah' ? styles.ustadzah : styles.ustadz}`}>
+              <span className={styles.sender}>{comment.sender}</span>
+              <p>{comment.content}</p>
+              <time dateTime={new Date(comment.createdAt).toISOString()}>
+                {new Intl.DateTimeFormat('id-ID', { timeZone: 'Asia/Jakarta', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(comment.createdAt))} WIB
+              </time>
+            </article>
+            </Fragment>
+          ))}
+        </div>
+        {showLatest && <button type="button" className={styles.latest} onClick={scrollToLatest}><ArrowDown size={16} /> Pesan terbaru</button>}
+        <CommentForm submitAction={submitAction} pendingReply={pendingReply}
+          onSent={() => { scrollToLatest(); router.refresh() }} />
+      </section>
+    </>
   )
 }
